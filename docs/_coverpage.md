@@ -1,4 +1,4 @@
-# cli-template
+# go-manager
 
 > This cli template shows the date and time in the terminal
 

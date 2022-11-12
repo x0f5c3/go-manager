@@ -1,9 +1,9 @@
-# cli-template
+# go-manager
 
 ## Usage
 > This cli template shows the date and time in the terminal
 
-cli-template
+go-manager
 
 ## Description
 
@@ -30,22 +30,22 @@ cli-template time --live
 ## Commands
 |Command|Usage|
 |-------|-----|
-|`cli-template completion`|Generate the autocompletion script for the specified shell|
-|`cli-template date`|Prints the current date.|
-|`cli-template help`|Help about any command|
-|`cli-template time`|Prints the current time|
+|`go-manager completion`|Generate the autocompletion script for the specified shell|
+|`go-manager date`|Prints the current date.|
+|`go-manager help`|Help about any command|
+|`go-manager time`|Prints the current time|
 # ... completion
-`cli-template completion`
+`go-manager completion`
 
 ## Usage
 > Generate the autocompletion script for the specified shell
 
-cli-template completion
+go-manager completion
 
 ## Description
 
 ```
-Generate the autocompletion script for cli-template for the specified shell.
+Generate the autocompletion script for go-manager for the specified shell.
 See each sub-command's help for details on how to use the generated script.
 
 ```
@@ -53,17 +53,17 @@ See each sub-command's help for details on how to use the generated script.
 ## Commands
 |Command|Usage|
 |-------|-----|
-|`cli-template completion bash`|Generate the autocompletion script for bash|
-|`cli-template completion fish`|Generate the autocompletion script for fish|
-|`cli-template completion powershell`|Generate the autocompletion script for powershell|
-|`cli-template completion zsh`|Generate the autocompletion script for zsh|
+|`go-manager completion bash`|Generate the autocompletion script for bash|
+|`go-manager completion fish`|Generate the autocompletion script for fish|
+|`go-manager completion powershell`|Generate the autocompletion script for powershell|
+|`go-manager completion zsh`|Generate the autocompletion script for zsh|
 # ... completion bash
-`cli-template completion bash`
+`go-manager completion bash`
 
 ## Usage
 > Generate the autocompletion script for bash
 
-cli-template completion bash
+go-manager completion bash
 
 ## Description
 
@@ -75,17 +75,17 @@ If it is not installed already, you can install it via your OS's package manager
 
 To load completions in your current shell session:
 
-	source <(cli-template completion bash)
+	source <(go-manager completion bash)
 
 To load completions for every new session, execute once:
 
 #### Linux:
 
-	cli-template completion bash > /etc/bash_completion.d/cli-template
+	go-manager completion bash > /etc/bash_completion.d/go-manager
 
 #### macOS:
 
-	cli-template completion bash > /usr/local/etc/bash_completion.d/cli-template
+	go-manager completion bash > /usr/local/etc/bash_completion.d/go-manager
 
 You will need to start a new shell for this setup to take effect.
 
@@ -96,12 +96,12 @@ You will need to start a new shell for this setup to take effect.
 |----|-----|
 |`--no-descriptions`|disable completion descriptions|
 # ... completion fish
-`cli-template completion fish`
+`go-manager completion fish`
 
 ## Usage
 > Generate the autocompletion script for fish
 
-cli-template completion fish
+go-manager completion fish
 
 ## Description
 
@@ -110,11 +110,11 @@ Generate the autocompletion script for the fish shell.
 
 To load completions in your current shell session:
 
-	cli-template completion fish | source
+	go-manager completion fish | source
 
 To load completions for every new session, execute once:
 
-	cli-template completion fish > ~/.config/fish/completions/cli-template.fish
+	go-manager completion fish > ~/.config/fish/completions/go-manager.fish
 
 You will need to start a new shell for this setup to take effect.
 
@@ -125,12 +125,12 @@ You will need to start a new shell for this setup to take effect.
 |----|-----|
 |`--no-descriptions`|disable completion descriptions|
 # ... completion powershell
-`cli-template completion powershell`
+`go-manager completion powershell`
 
 ## Usage
 > Generate the autocompletion script for powershell
 
-cli-template completion powershell
+go-manager completion powershell
 
 ## Description
 
@@ -139,7 +139,7 @@ Generate the autocompletion script for powershell.
 
 To load completions in your current shell session:
 
-	cli-template completion powershell | Out-String | Invoke-Expression
+	go-manager completion powershell | Out-String | Invoke-Expression
 
 To load completions for every new session, add the output of the above command
 to your powershell profile.
@@ -151,12 +151,12 @@ to your powershell profile.
 |----|-----|
 |`--no-descriptions`|disable completion descriptions|
 # ... completion zsh
-`cli-template completion zsh`
+`go-manager completion zsh`
 
 ## Usage
 > Generate the autocompletion script for zsh
 
-cli-template completion zsh
+go-manager completion zsh
 
 ## Description
 
@@ -172,11 +172,11 @@ To load completions for every new session, execute once:
 
 #### Linux:
 
-	cli-template completion zsh > "${fpath[1]}/_cli-template"
+	go-manager completion zsh > "${fpath[1]}/_go-manager"
 
 #### macOS:
 
-	cli-template completion zsh > /usr/local/share/zsh/site-functions/_cli-template
+	go-manager completion zsh > /usr/local/share/zsh/site-functions/_go-manager
 
 You will need to start a new shell for this setup to take effect.
 
@@ -187,38 +187,38 @@ You will need to start a new shell for this setup to take effect.
 |----|-----|
 |`--no-descriptions`|disable completion descriptions|
 # ... date
-`cli-template date`
+`go-manager date`
 
 ## Usage
 > Prints the current date.
 
-cli-template date
+go-manager date
 
 ## Flags
 |Flag|Usage|
 |----|-----|
 |`-f, --format string`|specify a custom date format (default "02 Jan 06")|
 # ... help
-`cli-template help`
+`go-manager help`
 
 ## Usage
 > Help about any command
 
-cli-template help [command]
+go-manager help [command]
 
 ## Description
 
 ```
 Help provides help for any command in the application.
-Simply type cli-template help [path to command] for full details.
+Simply type go-manager help [path to command] for full details.
 ```
 # ... time
-`cli-template time`
+`go-manager time`
 
 ## Usage
 > Prints the current time
 
-cli-template time
+go-manager time
 
 ## Description
 
@@ -233,4 +233,4 @@ You can print a live clock with the '--live' flag!
 
 
 ---
-> **Documentation automatically generated with [PTerm](https://github.com/pterm/cli-template) on 16 July 2022**
+> **Documentation automatically generated with [PTerm](https://github.com/pterm/cli-template) on 12 November 2022**
