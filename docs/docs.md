@@ -85,7 +85,7 @@ To load completions for every new session, execute once:
 
 #### macOS:
 
-	go-manager completion bash > /usr/local/etc/bash_completion.d/go-manager
+	go-manager completion bash > $(brew --prefix)/etc/bash_completion.d/go-manager
 
 You will need to start a new shell for this setup to take effect.
 
@@ -168,6 +168,10 @@ to enable it.  You can execute the following once:
 
 	echo "autoload -U compinit; compinit" >> ~/.zshrc
 
+To load completions in your current shell session:
+
+	source <(go-manager completion zsh); compdef _go-manager go-manager
+
 To load completions for every new session, execute once:
 
 #### Linux:
@@ -176,7 +180,7 @@ To load completions for every new session, execute once:
 
 #### macOS:
 
-	go-manager completion zsh > /usr/local/share/zsh/site-functions/_go-manager
+	go-manager completion zsh > $(brew --prefix)/share/zsh/site-functions/_go-manager
 
 You will need to start a new shell for this setup to take effect.
 
