@@ -1,24 +1,9 @@
 # go-manager
 
 ## Usage
-> This cli template shows the date and time in the terminal
+> This tool will download the latest version of Go
 
 go-manager
-
-## Description
-
-```
-This is a template CLI application, which can be used as a boilerplate for awesome CLI tools written in Go.
-This template prints the date or time to the terminal.
-```
-## Examples
-
-```bash
-cli-template date
-cli-template date --format 20060102
-cli-template time
-cli-template time --live
-```
 
 ## Flags
 |Flag|Usage|
@@ -31,9 +16,7 @@ cli-template time --live
 |Command|Usage|
 |-------|-----|
 |`go-manager completion`|Generate the autocompletion script for the specified shell|
-|`go-manager date`|Prints the current date.|
 |`go-manager help`|Help about any command|
-|`go-manager time`|Prints the current time|
 # ... completion
 `go-manager completion`
 
@@ -190,18 +173,6 @@ You will need to start a new shell for this setup to take effect.
 |Flag|Usage|
 |----|-----|
 |`--no-descriptions`|disable completion descriptions|
-# ... date
-`go-manager date`
-
-## Usage
-> Prints the current date.
-
-go-manager date
-
-## Flags
-|Flag|Usage|
-|----|-----|
-|`-f, --format string`|specify a custom date format (default "02 Jan 06")|
 # ... help
 `go-manager help`
 
@@ -216,25 +187,7 @@ go-manager help [command]
 Help provides help for any command in the application.
 Simply type go-manager help [path to command] for full details.
 ```
-# ... time
-`go-manager time`
-
-## Usage
-> Prints the current time
-
-go-manager time
-
-## Description
-
-```
-You can print a live clock with the '--live' flag!
-```
-
-## Flags
-|Flag|Usage|
-|----|-----|
-|`-l, --live`|live output|
 
 
 ---
-> **Documentation automatically generated with [PTerm](https://github.com/pterm/cli-template) on 12 November 2022**
+> **Documentation automatically generated with [PTerm](https://github.com/pterm/cli-template) on 15 November 2022**
