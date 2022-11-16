@@ -7,19 +7,23 @@ import (
 	"github.com/pterm/pcli"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+
+	"github.com/x0f5c3/go-manager/pkg"
 )
 
 var rootCmd = &cobra.Command{
 	Use:     "go-manager",
 	Short:   "This tool will download the latest version of Go",
-	Version: "v0.0.1", // <---VERSION---> Updating this version, will also create a new GitHub release.
+	Args:    cobra.ExactArgs(1),
+	Version: "v0.0.2", // <---VERSION---> Updating this version, will also create a new GitHub release.
 	// Uncomment the following lines if your bare application has an action associated with it:
-	// RunE: func(cmd *cobra.Command, args []string) error {
-	// 	// Your code here
-	//
-	// 	return nil
-	// },
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dlSettings.OutDir = args[0]
+		return pkg.DownloadLatest(&dlSettings)
+	},
 }
+
+var dlSettings = pkg.DownloadSettings{}
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -54,9 +58,12 @@ func checkUpdate() {
 func init() {
 	// Adds global flags for PTerm settings.
 	// Fill the empty strings with the shorthand variant (if you like to have one).
-	rootCmd.PersistentFlags().BoolVarP(&pterm.PrintDebugMessages, "debug", "", false, "enable debug messages")
-	rootCmd.PersistentFlags().BoolVarP(&pterm.RawOutput, "raw", "", false, "print unstyled raw output (set it if output is written to a file)")
-	rootCmd.PersistentFlags().BoolVarP(&pcli.DisableUpdateChecking, "disable-update-checks", "", false, "disables update checks")
+	rootCmd.PersistentFlags().BoolVarP(&pterm.PrintDebugMessages, "debug", "d", false, "enable debug messages")
+	rootCmd.PersistentFlags().BoolVar(&pterm.RawOutput, "raw", false, "print unstyled raw output (set it if output is written to a file)")
+	rootCmd.PersistentFlags().BoolVar(&pcli.DisableUpdateChecking, "disable-update-checks", false, "disables update checks")
+	rootCmd.Flags().StringVarP(&dlSettings.Arch, "arch", "a", pkg.CurrentKind.Arch, "architecture")
+	rootCmd.Flags().StringVarP(&dlSettings.Os, "os", "o", pkg.CurrentKind.Os, "operating system")
+	rootCmd.Flags().StringVarP(&dlSettings.Kind, "kind", "k", pkg.CurrentKind.Kind, "kind")
 
 	// Use https://github.com/pterm/pcli to style the output of cobra.
 	err := pcli.SetRepo("x0f5c3/go-manager")

@@ -4,9 +4,11 @@ go 1.18
 
 require (
 	github.com/coreos/go-semver v0.3.0
+	github.com/goccy/go-json v0.9.11
 	github.com/pterm/pcli v0.4.6
 	github.com/pterm/pterm v0.12.49
 	github.com/spf13/cobra v1.6.1
+	github.com/valyala/fasthttp v1.38.0
 	github.com/x0f5c3/manic-go v0.5.4
 )
 
@@ -30,7 +32,6 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.38.0 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
