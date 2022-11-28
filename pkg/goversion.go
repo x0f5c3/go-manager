@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -10,16 +11,16 @@ import (
 
 	"github.com/goccy/go-json"
 
-	"github.com/coreos/go-semver/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/pterm/pterm"
 	"github.com/valyala/fasthttp"
 	"github.com/x0f5c3/manic-go/pkg/downloader"
 )
 
 const (
-	DLURL = "https://go.dev/dl/?mode=json&include=all"
-	KIND  = "archive"
-	OS    = runtime.GOOS
+	dLURL = "https://go.dev/dl/?mode=json&include=all"
+	iND   = "archive"
+	oS    = runtime.GOOS
 )
 
 type DownloadSettings struct {
@@ -41,7 +42,7 @@ func DownloadLatest(outdir ...*DownloadSettings) error {
 
 func GetVersions() (Versions, error) {
 	var dst []byte
-	statusCode, resp, err := fasthttp.Get(dst, DLURL)
+	statusCode, resp, err := fasthttp.Get(dst, dLURL)
 	if err != nil {
 		return nil, err
 	}
@@ -52,10 +53,7 @@ func GetVersions() (Versions, error) {
 	if err := json.Unmarshal(resp, &versions); err != nil {
 		return nil, err
 	}
-	versions.Parse()
-	sort.Slice(versions, func(i, j int) bool {
-		return (versions)[i].Parsed().LessThan(*(versions)[j].Parsed())
-	})
+	versions = versions.Parse()
 	return versions, nil
 }
 
@@ -90,35 +88,66 @@ func (f *File) Download(outDir ...*DownloadSettings) error {
 	return dled.Save(outPath)
 }
 
-type Versions []GoVersion
+type Versions []*GoVersion
 
-func (v *Versions) Parse() *Versions {
-	resChan := make(chan GoVersion)
+func (v Versions) Len() int {
+	return len(v)
+}
+
+func (v Versions) Less(i, j int) bool {
+	iParsed := v[i].Parsed()
+	jParsed := v[j].Parsed()
+	if iParsed == nil || jParsed == nil {
+		return false
+	}
+	return iParsed.LessThan(jParsed)
+}
+
+func (v Versions) Swap(i, j int) {
+	v[i], v[j] = v[j], v[i]
+}
+
+func (v Versions) Parse() Versions {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	resChan := make(chan *GoVersion)
 	wg := &sync.WaitGroup{}
-	for _, ver := range *v {
+	for _, ver := range v {
 		wg.Add(1)
-		go func(ver GoVersion) {
+		go func(ver *GoVersion) {
 			defer wg.Done()
 			newVer, err := ver.Parse()
 			if err != nil {
 				pterm.Debug.Printfln("failed to parse %s version: %s", ver.Version, err)
 				return
 			}
-			resChan <- *newVer
+			resChan <- newVer
 		}(ver)
 	}
 	go func() {
 		wg.Wait()
+		cancel()
 		close(resChan)
 	}()
-	res := make(Versions, len(*v))
-	cnt := 0
-	for ver := range resChan {
-		res[cnt] = ver
-		cnt++
+	res := make(Versions, 0, len(v))
+	for {
+		select {
+		case <-ctx.Done():
+			v = res
+			sort.Sort(v)
+			return v
+		case r := <-resChan:
+			res = append(res, r)
+		}
 	}
-	*v = res
-	return v
+	// cnt := 0
+	// for ver := range resChan {
+	// 	res[cnt] = ver
+	// 	cnt++
+	// }
+	// *v = res
+	// sort.Sort(sort.Reverse(v))
+	// return v
 }
 
 type GoVersion struct {
@@ -157,8 +186,8 @@ var CurrentKind = currentKindOSArch()
 
 func currentKindOSArch() KindOSArch {
 	return KindOSArch{
-		Kind: KIND,
-		Os:   OS,
+		Kind: iND,
+		Os:   oS,
 		Arch: runtime.GOARCH,
 	}
 }

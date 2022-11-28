@@ -7,6 +7,16 @@ import (
 	"github.com/pterm/pterm"
 )
 
+type GOPATH struct {
+	Dir string
+	GOROOT
+}
+
+type GOROOT struct {
+	Dir   string
+	paths map[string]*GOPATH
+}
+
 var EnvsDir = func() string {
 	home, err := os.UserHomeDir()
 	if err != nil {

@@ -15,7 +15,7 @@ var rootCmd = &cobra.Command{
 	Use:     "go-manager",
 	Short:   "This tool will download the latest version of Go",
 	Args:    cobra.ExactArgs(1),
-	Version: "v0.0.3", // <---VERSION---> Updating this version, will also create a new GitHub release.
+	Version: "v0.0.4", // <---VERSION---> Updating this version, will also create a new GitHub release.
 	// Uncomment the following lines if your bare application has an action associated with it:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dlSettings.OutDir = args[0]
@@ -64,6 +64,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&dlSettings.Arch, "arch", "a", pkg.CurrentKind.Arch, "architecture")
 	rootCmd.Flags().StringVarP(&dlSettings.Os, "os", "o", pkg.CurrentKind.Os, "operating system")
 	rootCmd.Flags().StringVarP(&dlSettings.Kind, "kind", "k", pkg.CurrentKind.Kind, "kind")
+	cobra.OnInitialize(mustInitConfig)
 
 	// Use https://github.com/pterm/pcli to style the output of cobra.
 	err := pcli.SetRepo("x0f5c3/go-manager")
