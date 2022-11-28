@@ -1,0 +1,4 @@
+envs_dir = '/home/runner/.config/goenvs'
+proxies = []
+
+[current]

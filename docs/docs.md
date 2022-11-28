@@ -8,8 +8,11 @@ go-manager
 ## Flags
 |Flag|Usage|
 |----|-----|
-|`--debug`|enable debug messages|
+|`-a, --arch string`|architecture (default "amd64")|
+|`-d, --debug`|enable debug messages|
 |`--disable-update-checks`|disables update checks|
+|`-k, --kind string`|kind (default "archive")|
+|`-o, --os string`|operating system (default "linux")|
 |`--raw`|print unstyled raw output (set it if output is written to a file)|
 
 ## Commands
@@ -190,4 +193,4 @@ Simply type go-manager help [path to command] for full details.
 
 
 ---
-> **Documentation automatically generated with [PTerm](https://github.com/pterm/cli-template) on 15 November 2022**
+> **Documentation automatically generated with [PTerm](https://github.com/pterm/cli-template) on 28 November 2022**
