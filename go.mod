@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
-	github.com/goccy/go-json v0.9.11
+	github.com/goccy/go-json v0.10.0
 	github.com/pterm/pcli v0.4.6
 	github.com/pterm/pterm v0.12.50
 	github.com/spf13/cobra v1.6.1
