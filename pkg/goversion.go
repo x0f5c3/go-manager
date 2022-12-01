@@ -3,17 +3,17 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/x0f5c3/zerolog/log"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"sync"
 
 	"github.com/goccy/go-json"
-
-	"github.com/Masterminds/semver/v3"
-	"github.com/pterm/pterm"
 	"github.com/valyala/fasthttp"
+	"github.com/x0f5c3/go-manager/pkg/semver"
 	"github.com/x0f5c3/manic-go/pkg/downloader"
 )
 
@@ -25,7 +25,27 @@ const (
 
 type DownloadSettings struct {
 	OutDir string
-	KindOSArch
+	OSTriple
+}
+
+func (d *DownloadSettings) AddToFlags(cmd *cobra.Command, persistent bool) {
+	var flags *pflag.FlagSet
+	if persistent {
+		flags = cmd.PersistentFlags()
+	} else {
+		flags = cmd.Flags()
+	}
+	flags.StringVarP(&d.OutDir, "out-dir", "o", d.OutDir, "output directory")
+	flags.StringVarP(&d.OSTriple.Os, "os", "s", d.OSTriple.Os, "os")
+	flags.StringVarP(&d.OSTriple.Arch, "arch", "a", d.OSTriple.Arch, "arch")
+	flags.StringVarP(&d.OSTriple.Kind, "kind", "k", d.OSTriple.Kind, "kind")
+}
+
+func NewDownloadSettings(outDir string, osTriple ...OSTriple) *DownloadSettings {
+	if len(osTriple) > 0 {
+		return &DownloadSettings{OutDir: outDir, OSTriple: osTriple[0]}
+	}
+	return &DownloadSettings{OutDir: outDir, OSTriple: CurrentKind}
 }
 
 func DownloadLatest(outdir ...*DownloadSettings) error {
@@ -41,19 +61,22 @@ func DownloadLatest(outdir ...*DownloadSettings) error {
 }
 
 func GetVersions() (Versions, error) {
-	var dst []byte
-	statusCode, resp, err := fasthttp.Get(dst, dLURL)
+	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseResponse(resp)
+	req := fasthttp.AcquireRequest()
+	defer fasthttp.ReleaseRequest(req)
+	req.SetRequestURI(dLURL)
+	req.Header.SetMethod("GET")
+	req.Header.Set("User-Agent", "manic-go")
+	err := fasthttp.Do(req, resp)
 	if err != nil {
 		return nil, err
 	}
-	if statusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get versions, statuscode: %d", statusCode)
-	}
-	versions := make(Versions, 0)
-	if err := json.Unmarshal(resp, &versions); err != nil {
+	var versions Versions
+	if err := json.Unmarshal(resp.Body(), &versions); err != nil {
 		return nil, err
 	}
-	versions = versions.Parse()
+	versions = versions.OnlyStable()
 	return versions, nil
 }
 
@@ -90,106 +113,109 @@ func (f *File) Download(outDir ...*DownloadSettings) error {
 
 type Versions []*GoVersion
 
-func (v Versions) Len() int {
-	return len(v)
-}
-
-func (v Versions) Less(i, j int) bool {
-	iParsed := v[i].Parsed()
-	jParsed := v[j].Parsed()
-	if iParsed == nil || jParsed == nil {
-		return false
+func (v *Versions) Parse() (*Versions, error) {
+	pb, err := pterm.DefaultProgressbar.WithTitle("Parsing versions").WithTotal(len(*v)).Start()
+	if err != nil {
+		return nil, err
 	}
-	return iParsed.LessThan(jParsed)
-}
-
-func (v Versions) Swap(i, j int) {
-	v[i], v[j] = v[j], v[i]
-}
-
-func (v Versions) Parse() Versions {
+	defer func(pb *pterm.ProgressbarPrinter) {
+		_, err := pb.Stop()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to stop progress bar")
+		}
+	}(pb)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	resChan := make(chan *GoVersion)
 	wg := &sync.WaitGroup{}
-	for _, ver := range v {
+	resChan := make(chan *GoVersion, len(*v))
+	var versions Versions
+	for _, version := range *v {
 		wg.Add(1)
-		go func(ver *GoVersion) {
+		go func(version *GoVersion) {
 			defer wg.Done()
-			newVer, err := ver.Parse()
+			defer pb.Increment()
+			parsed, err := version.Parse()
 			if err != nil {
-				pterm.Debug.Printfln("failed to parse %s version: %s", ver.Version, err)
+				cancel()
 				return
 			}
-			resChan <- newVer
-		}(ver)
+			resChan <- parsed
+		}(version)
 	}
 	go func() {
 		wg.Wait()
 		cancel()
 		close(resChan)
 	}()
-	res := make(Versions, 0, len(v))
 	for {
 		select {
 		case <-ctx.Done():
-			v = res
-			sort.Sort(v)
-			return v
-		case r := <-resChan:
-			res = append(res, r)
+			return &versions, nil
+		case version := <-resChan:
+			versions = append(versions, version)
 		}
 	}
-	// cnt := 0
-	// for ver := range resChan {
-	// 	res[cnt] = ver
-	// 	cnt++
-	// }
-	// *v = res
-	// sort.Sort(sort.Reverse(v))
-	// return v
+}
+
+func (v *Versions) OnlyStable() Versions {
+	var versions Versions
+	for _, version := range *v {
+		if version.Stable {
+			versions = append(versions, version)
+		}
+	}
+	return versions
+}
+
+func (v *Versions) Len() int {
+	return len(*v)
+}
+
+func (v *Versions) Less(i, j int) bool {
+	cmp := semver.Compare((*v)[j].Version, (*v)[i].Version)
+	if cmp != 0 {
+		return cmp < 0
+	}
+	return (*v)[j].Version < (*v)[i].Version
+}
+
+func (v *Versions) Swap(i, j int) {
+	(*v)[i], (*v)[j] = (*v)[j], (*v)[i]
 }
 
 type GoVersion struct {
-	Version string `json:"version"`
-	Stable  bool   `json:"stable"`
-	Files   []File `json:"files"`
-	parsed  *semver.Version
-}
-
-func (v *GoVersion) Parsed() *semver.Version {
-	return v.parsed
-}
-
-func (v *GoVersion) SetParsed(parsed *semver.Version) {
-	v.parsed = parsed
+	Version string          `json:"version"`
+	Stable  bool            `json:"stable"`
+	Files   []File          `json:"files"`
+	Parsed  *semver.Version `json:"-"`
 }
 
 func (v *GoVersion) Parse() (*GoVersion, error) {
-	if v.parsed == nil {
-		parsed, err := semver.NewVersion(v.Version)
-		if err != nil {
-			return nil, err
-		}
-		v.parsed = parsed
+	if v.Parsed != nil {
+		return v, nil
 	}
+	parsed, err := semver.ParseFromGo(v.Version)
+	if err != nil {
+		return nil, err
+	}
+	v.Parsed = parsed
 	return v, nil
 }
 
-type KindOSArch struct {
+type OSTriple struct {
 	Kind string
 	Os   string
 	Arch string
 }
 
+func NewOSTriple(kind string, os string, arch string) OSTriple {
+	return OSTriple{Kind: kind, Os: os, Arch: arch}
+}
+
 var CurrentKind = currentKindOSArch()
 
-func currentKindOSArch() KindOSArch {
-	return KindOSArch{
-		Kind: iND,
-		Os:   oS,
-		Arch: runtime.GOARCH,
-	}
+func currentKindOSArch() OSTriple {
+	return NewOSTriple(iND, oS, runtime.GOARCH)
 }
 
 func (v *GoVersion) File(wanted ...*DownloadSettings) *File {
