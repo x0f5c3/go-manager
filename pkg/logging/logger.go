@@ -12,7 +12,7 @@ import (
 	"github.com/x0f5c3/zerolog/log"
 	"github.com/x0f5c3/zerolog/pkgerrors"
 
-	. "github.com/x0f5c3/go-manager/internal/fs"
+	. "github.com/x0f5c3/go-manager/internal/fsutil"
 )
 
 // type lvlWriters struct {

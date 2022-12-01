@@ -1,4 +1,4 @@
-package cmd
+package config
 
 import (
 	"errors"
@@ -11,37 +11,12 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/viper"
 	"github.com/x0f5c3/zerolog/log"
 
-	"github.com/spf13/viper"
-
+	"github.com/x0f5c3/go-manager/internal/fsutil"
 	"github.com/x0f5c3/go-manager/pkg/semver"
 )
-
-func appDataDir(parent ...string) string {
-	root, err := func() (string, error) {
-		if len(parent) > 0 {
-			return parent[0], nil
-		}
-		return os.UserConfigDir()
-	}()
-	if err != nil {
-		return "gom"
-	}
-	return filepath.Join(root, "gom")
-}
-
-var defaultDataDir = appDataDir()
-var defaultEnvDir = filepath.Join(defaultDataDir, "envs")
-var defaultConfigPath = filepath.Join(defaultDataDir, "gom.toml")
-
-var envDir = func() string {
-	home, err := os.UserConfigDir()
-	if err != nil {
-		checkErr(err)
-	}
-	return filepath.Join(home, "goenvs")
-}()
 
 func decoderHookSemver() mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
@@ -98,7 +73,7 @@ func initConfig() (*Config, error) {
 	}
 	viper.AddConfigPath(configDir)
 	viper.AddConfigPath(filepath.Join(configDir, "gom"))
-	viper.SetDefault("envs_dir", envDir)
+	viper.SetDefault("envs_dir", fsutil.DefaultEnvDir)
 	current, err := currentVersion()
 	if err != nil {
 		viper.SetDefault("current", nil)
@@ -195,10 +170,3 @@ func defaultConfig() *Config {
 		current: nil,
 	}
 }
-
-// func (c *Config) ToFlags() *pflag.FlagSet {
-// 	res := pflag.NewFlagSet("config", pflag.ExitOnError)
-// 	res.StringSliceVar(&c.proxies, "proxies", []string{}, "Proxies to use")
-// 	res.StringVar(&c.envsDir, "envs-dir", envDir, "Directory to store environments in")
-// 	res.Var
-// }
