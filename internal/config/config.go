@@ -5,12 +5,14 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/pelletier/go-toml"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/x0f5c3/zerolog/log"
 
@@ -34,8 +36,10 @@ func currentVersion() (*semver.Version, error) {
 	c := exec.Command("go", "version")
 	out, err := c.Output()
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to get go version")
 		return nil, err
 	}
+	log.Debug().Str("out", string(out)).Msg("go version")
 	sp := strings.Split(string(out), " ")
 	if len(sp) < 3 {
 		return nil, err
@@ -49,124 +53,348 @@ func currentVersion() (*semver.Version, error) {
 }
 
 type Config struct {
-	proxies    []string        `mapstructure:"proxies, omitempty"`
-	lastUpdate time.Time       `mapstructure:"last_update, omitempty"`
-	envsDir    string          `mapstructure:"envs_dir"`
-	current    *semver.Version `mapstructure:"current"`
+	Proxies    []string        `mapstructure:"proxies, omitempty"`
+	LastUpdate time.Time       `mapstructure:"last_update, omitempty"`
+	ConfigFile string          `mapstructure:"config_file, omitempty"`
+	EnvsDir    string          `mapstructure:"envs_dir"`
+	Current    *semver.Version `mapstructure:"current"`
+	mod        bool            `mapstructure:"-"`
 }
 
-func viperToConfig() (*Config, error) {
-	var config Config
-	err := viper.Unmarshal(&config, viper.DecodeHook(decoderHookSemver()))
-	if err != nil {
-		return nil, err
-	}
-	return &config, nil
+func (c *Config) SetProxies(Proxies []string) {
+	c.mod = true
+	c.Proxies = Proxies
 }
 
-func initConfig() (*Config, error) {
-	viper.SetConfigName("gom")
-	viper.AddConfigPath(".")
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return nil, err
+func (c *Config) SetLastUpdate(LastUpdate time.Time) {
+	c.mod = true
+	c.LastUpdate = LastUpdate
+}
+
+func (c *Config) SetConfigFile(ConfigFile string) {
+	c.mod = true
+	c.ConfigFile = ConfigFile
+}
+
+func (c *Config) SetEnvsDir(EnvsDir string) {
+	c.mod = true
+	c.EnvsDir = EnvsDir
+}
+
+func (c *Config) SetCurrent(Current *semver.Version) {
+	c.mod = true
+	c.Current = Current
+}
+
+func checkFlagsExists(flags *pflag.FlagSet) []string {
+	var flagNames []string
+	if !flags.Changed("proxies") {
+		flagNames = append(flagNames, "proxies")
 	}
-	viper.AddConfigPath(configDir)
-	viper.AddConfigPath(filepath.Join(configDir, "gom"))
-	viper.SetDefault("envs_dir", fsutil.DefaultEnvDir)
-	current, err := currentVersion()
+	if !flags.Changed("envs_dir") {
+		flagNames = append(flagNames, "envs-dir")
+	}
+	if !flags.Changed("current") {
+		flagNames = append(flagNames, "current")
+	}
+	if !flags.Changed("config") {
+		flagNames = append(flagNames, "config")
+	}
+	return flagNames
+}
+
+func configFlagSet() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("config", pflag.ContinueOnError)
+	flags.StringSliceVar(&config.Proxies, "proxies", []string{}, "Proxies to use")
+	flags.StringVar(&config.EnvsDir, "envs-dir", "", "Directory to store go envs")
+	flags.Var(config.Current, "current", "Current go version")
+	flags.StringVarP(&config.ConfigFile, "config", "c", "", "Config file")
+	return flags
+}
+
+func BindFlags(flags *pflag.FlagSet) error {
+	flags.StringSliceVar(&config.Proxies, "proxies", []string{}, "Proxies to use")
+	err := viper.BindPFlag("proxies", flags.Lookup("proxies"))
 	if err != nil {
-		viper.SetDefault("current", nil)
+		return err
+	}
+	flags.StringVar(&config.EnvsDir, "envs-dir", "", "Directory to store go envs")
+	err = viper.BindPFlag("envs_dir", flags.Lookup("envs-dir"))
+	if err != nil {
+		return err
+	}
+	flags.Var(config.Current, "current", "Current go version")
+	err = viper.BindPFlag("current", flags.Lookup("current"))
+	if err != nil {
+		return err
+	}
+	flags.StringVarP(&config.ConfigFile, "config", "c", "", "Config file")
+	err = viper.BindPFlag("config_file", flags.Lookup("config"))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ReadInOrFlags(flags *pflag.FlagSet, confDir ...string) (*Config, error) {
+	finalConf := new(Config)
+	fileConf, err := ReadInConfig(confDir...)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to read config")
+	}
+	changed := checkFlagsExists(flags)
+	current, envsDir, conf := fileConf.Current, fileConf.EnvsDir, fileConf.ConfigFile
+	proxies := fileConf.Proxies
+	if len(changed) > 0 {
+		log.Debug().Strs("flags", changed).Msg("Flags set, using flags")
+		for _, flag := range changed {
+			switch flag {
+			case "proxies":
+				proxies, err := flags.GetStringSlice(flag)
+				if err == nil {
+					proxies = fileConf.Proxies
+				}
+				finalConf.SetProxies(proxies)
+			case "envs-dir":
+				envsDir, err := flags.GetString(flag)
+				if err != nil {
+					finalConf.EnvsDir = fileConf.EnvsDir
+					continue
+				}
+				finalConf.EnvsDir = envsDir
+			case "current":
+				current, err := flags.GetString(flag)
+				if err != nil {
+					finalConf.Current = fileConf.Current
+				}
+				if semver.IsValid(current) {
+					finalConf.Current, err = semver.Parse(current)
+					if err != nil {
+						finalConf.Current = fileConf.Current
+					}
+				} else {
+					finalConf.Current = fileConf.Current
+				}
+			case "config":
+				config, err := flags.GetString(flag)
+				if err != nil {
+					finalConf.ConfigFile = fileConf.ConfigFile
+					continue
+				}
+				finalConf.ConfigFile = config
+			}
+		}
 	} else {
-		viper.SetDefault("current", current)
+		log.Debug().Msg("No flags set, using config")
+		finalConf = fileConf
+		return finalConf, nil
 	}
-	viper.SetEnvPrefix("GOM")
-	viper.AutomaticEnv()
-	err = viper.ReadInConfig()
+
+	return finalConf, nil
+}
+
+func ReadInConfig(confDir ...string) (*Config, error) {
+	return tryRead(confDir...)
+	// var conf *Config
+	// var dir string
+	// if len(confDir) == 0 {
+	// 	dir = fsutil.DefaultDataDir
+	// } else {
+	// 	dir = confDir[0]
+	// }
+	// fPath := filepath.Join(dir, fsutil.DefaultConfigFilename)
+	// if fsutil.CheckExists(fPath) {
+	// 	f, err := os.Open(fPath)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	defer f.Close()
+	// 	err = toml.NewDecoder(f).Decode(conf)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	// conf := new(Config)
+	// 	// err = viper.Unmarshal(conf, viper.DecodeHook(decoderHookSemver()))
+	// 	// if err != nil {
+	// 	// 	return nil, err
+	// 	// }
+	// 	config = *conf
+	// 	return conf, nil
+	// } else {
+	// 	viper.SetConfigName(fsutil.DefaultConfigName)
+	// 	viper.AddConfigPath(dir)
+	//
+	// }
+}
+
+func (c *Config) Save() error {
+	c.LastUpdate = time.Now()
+	viper.Set("last_update", c.LastUpdate)
+	viper.Set("proxies", c.Proxies)
+	viper.Set("envs_dir", c.EnvsDir)
+	viper.Set("current", c.Current)
+	return viper.WriteConfigAs(c.ConfigFile)
+}
+
+func tryRead(toTry ...string) (*Config, error) {
+	if len(toTry) == 0 {
+		toTry = append(toTry, fsutil.DefaultConfigPath)
+	}
+	var foundFiles []string
+	for _, v := range toTry {
+		if !fsutil.CheckExists(v) {
+			log.Error().Str("path", v).Msg("File does not exist")
+			continue
+		}
+		foundFiles = append(foundFiles, v)
+	}
+	var latestConf string
+	var latestTime time.Time
+	rest := make(map[string]fs.FileInfo)
+	restKeys := make([]string, 0)
+	for _, v := range foundFiles {
+		info, err := os.Stat(v)
+		if err != nil {
+			log.Error().Err(err).Str("path", v).Msg("Failed to read config")
+			continue
+		}
+		rest[v] = info
+		if latestTime == (time.Time{}) {
+			latestTime = info.ModTime()
+			latestConf = v
+			continue
+		}
+		if info.ModTime().After(latestTime) {
+			latestTime = info.ModTime()
+			latestConf = v
+		}
+	}
+	delete(rest, latestConf)
+	for k := range rest {
+		restKeys = append(restKeys, k)
+	}
+	sort.Slice(restKeys, func(i, j int) bool {
+		return rest[restKeys[j]].ModTime().After(rest[restKeys[i]].ModTime())
+	})
+	if fsutil.CheckExists(latestConf) {
+		conf, err := tryReadFile(latestConf)
+		if err != nil {
+			log.Error().Err(err).Str("path", latestConf).Msg("Failed to read config")
+			if len(restKeys) > 0 {
+				for _, v := range restKeys {
+					_, ok := rest[v]
+					if !ok {
+						continue
+					}
+					conf, err = tryReadFile(v)
+					if err != nil {
+						log.Error().Err(err).Str("path", v).Msg("Failed to read config")
+						continue
+					}
+					return conf, nil
+				}
+			} else {
+				return nil, err
+			}
+			if conf == nil {
+				return nil, errors.New("failed to read config")
+			}
+		}
+		return conf, nil
+	}
+	return nil, errors.New("default config file does not exist")
+}
+
+func tryReadFile(path string) (*Config, error) {
+	if !fsutil.CheckExists(path) {
+		return nil, errors.New("file does not exist")
+	}
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	return viperToConfig()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to close file")
+		}
+	}(f)
+	var conf Config
+	err = toml.NewDecoder(f).Decode(&conf)
+	if err != nil {
+		return nil, err
+	}
+	return &conf, nil
 }
 
-var config *Config
+var config = defaultConfig()
 
-func initconfig() {
-	configDirCreate()
-	// Set config
-	// v := viper.New()
-	// v.SetEnvPrefix("gom")
-	// v.AutomaticEnv()
-	// v.SetDefault("current", currentVersion())
-	// confDir, err := os.UserConfigDir()
-	// checkErr(err)
-	// v.AddConfigPath(confDir)
-	// v.AddConfigPath(filepath.Join(confDir, "gom"))
-	// var maybeConf Config
-	// err = v.Unmarshal(&maybeConf)
-	res, err := initConfig()
+func init() {
+	create, err := configDirCreate()
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to init config")
-		config = &Config{}
+		log.Error().Err(err).Msg("Failed to create config dir")
 		return
 	}
-	// if maybeConf.current == "" {
-	//	maybeConf.current = currentVersion()
-	// }
+	res, err := InitConfig(create)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to init config")
+		return
+	}
 	config = res
+	err = config.Save()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to save config")
+		return
+	}
 }
 
 func configDirCreate() (string, error) {
+	if fsutil.CheckExists(fsutil.DefaultDataDir) {
+		return fsutil.DefaultDataDir, nil
+	}
 	// Create config dir
-	confDir, err := os.UserConfigDir()
+	err := fsutil.CreateDir(fsutil.DefaultDataDir)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user config dir")
-		confDir, err = filepath.Abs("gom")
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get gom under current dir as abosolute path, using relative path")
-			confDir = "gom"
-		}
-		if _, err = os.Stat(confDir); errors.Is(err, fs.ErrNotExist) {
-			err = os.MkdirAll(confDir, 0755)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to create config dir")
-			}
-		}
-	} else {
-		confDir = filepath.Join(confDir, "gom")
-		if _, err = os.Stat(confDir); errors.Is(err, fs.ErrNotExist) {
-			err = os.MkdirAll(confDir, 0755)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to create config dir")
-			}
-		}
+		log.Error().Err(err).Msg("Failed to create config dir")
+		return "", err
 	}
-	if confDir == "" {
-		log.Error().Err(err).Msg("Failed to get config dir")
-	}
-	return confDir, err
+	return fsutil.DefaultDataDir, nil
 }
 
 func mustWriteConfig() {
-	err := viper.WriteConfig()
+	err := Vip.WriteConfig()
 	if err != nil {
-		checkErr(err)
+		log.Fatal().Err(err).Msg("Failed to write config")
 	}
 }
 
 func mustInitConfig() {
-	conf, err := initConfig()
+	conf, err := InitConfig(fsutil.DefaultDataDir, WithDefaults())
 	if err != nil {
 		config = defaultConfig()
 
 	}
 	config = conf
-	err = viper.SafeWriteConfig()
+	err = config.Save()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to save config")
+	}
 }
+
 func defaultConfig() *Config {
+	curr, err := currentVersion()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get current version, using nil")
+		curr = nil
+	} else {
+		log.Debug().Str("Version", curr.String()).Msg("Got current version")
+	}
 	return &Config{
-		proxies: nil,
-		envsDir: envDir,
-		current: nil,
+		Proxies:    nil,
+		EnvsDir:    fsutil.DefaultEnvDir,
+		ConfigFile: fsutil.DefaultConfigPath,
+		LastUpdate: time.Now(),
+		Current:    curr,
+		mod:        false,
 	}
 }

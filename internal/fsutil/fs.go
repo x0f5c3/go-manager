@@ -24,6 +24,38 @@ func FindExistingParent(path string) string {
 	return path
 }
 
+type InstallInformation struct {
+	InstallPath string
+	ConfigPath  string
+	ExePath     string
+}
+
+// GetInstallInformation returns the install information for the given executable
+func GetInstallInformation() (*InstallInformation, error) {
+	exe, err := FindMyself()
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to get absolute path for %s", exe)
+		return nil, errors.Wrapf(err, "failed to get absolute path for %s", exe)
+	}
+	exeDir := filepath.Dir(exe)
+	installPath := filepath.Dir(exeDir)
+	configPath := filepath.Join(installPath, "gom.toml")
+	return &InstallInformation{
+		InstallPath: installPath,
+		ConfigPath:  configPath,
+		ExePath:     exe,
+	}, nil
+}
+
+func FindMyself() (string, error) {
+	ex, err := os.Executable()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get executable path")
+		return "", errors.Wrap(err, "failed to find executable")
+	}
+	return filepath.EvalSymlinks(ex)
+}
+
 // CheckExists checks if the given path exists
 func CheckExists(path string) bool {
 	if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {

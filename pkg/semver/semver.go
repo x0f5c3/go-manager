@@ -15,6 +15,15 @@ type Version struct {
 	build      string
 }
 
+func (p *Version) Set(s string) (err error) {
+	p, err = Parse(s)
+	return
+}
+
+func (p *Version) Type() string {
+	return "semver"
+}
+
 func ParseFromGo(vers string) (*Version, error) {
 	return Parse(strings.ReplaceAll(vers, "go", "v"))
 }

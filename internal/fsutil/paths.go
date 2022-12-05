@@ -38,8 +38,9 @@ func AppDataDir(parent ...string) string {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get user config dir")
 		path = "gom"
+	} else {
+		path = filepath.Join(root, "gom")
 	}
-	path = filepath.Join(root, "gom")
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get absolute path")
@@ -50,4 +51,6 @@ func AppDataDir(parent ...string) string {
 
 var DefaultDataDir = AppDataDir()
 var DefaultEnvDir = filepath.Join(DefaultDataDir, "envs")
-var DefaultConfigPath = filepath.Join(DefaultDataDir, "gom.toml")
+var DefaultConfigFilename = "gom.toml"
+var DefaultConfigName = "gom"
+var DefaultConfigPath = filepath.Join(DefaultDataDir, DefaultConfigFilename)
