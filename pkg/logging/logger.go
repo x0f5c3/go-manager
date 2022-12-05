@@ -15,10 +15,25 @@ import (
 	. "github.com/x0f5c3/go-manager/internal/fsutil"
 )
 
-// type lvlWriters struct {
-// 	baseLvl zerolog.Level
-// 	writers map[zerolog.Level]io.Writer
-// }
+type Level zerolog.Level
+
+type MultiWriter struct {
+	baseLvl zerolog.Level
+	writers map[zerolog.Level]io.Writer
+}
+
+type LevelLogger interface {
+	SetLevel()
+	Level() Level
+	zerolog.LevelWriter
+}
+
+func NewMultiWriter(baseLvl zerolog.Level, writers map[zerolog.Level]io.Writer) *MultiWriter {
+	return &MultiWriter{
+		baseLvl: baseLvl,
+		writers: writers,
+	}
+}
 
 var (
 	defaultLogDir = func() string {
