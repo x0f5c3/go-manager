@@ -50,7 +50,7 @@ func todayLogDir(parent string) string {
 }
 
 func currentLogFile(logDir string) string {
-	return filepath.Join(todayLogDir(logDir), fmt.Sprintf("%s.log", time.Now().Format("15_04_05")))
+	return filepath.Join(logDir, fmt.Sprintf("%s.log", time.Now().Format("15_04_05")))
 }
 
 func initLogging(consoleOut bool, logDirs ...string) error {
@@ -61,14 +61,14 @@ func initLogging(consoleOut bool, logDirs ...string) error {
 		logDir = defaultLogDir
 	}
 	todays := todayLogDir(logDir)
-	if !CheckExists(logDir) {
-		log.Warn().Msgf("failed to access %s", logDir)
+	if !CheckExists(todays) {
+		log.Warn().Msgf("failed to access %s", todays)
 		err := CreateDir(logDir)
 		if err != nil {
 			return err
 		}
 	}
-	logFile := currentLogFile(logDir)
+	logFile := currentLogFile(todays)
 	exists, perms := CheckExistsWritable(logFile)
 	if !exists && perms {
 		log.Warn().Bool("Exists", exists).Bool("Perms", perms).Msgf("failed to access %s", logFile)
