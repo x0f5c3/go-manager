@@ -20,6 +20,8 @@ import (
 	"github.com/x0f5c3/go-manager/pkg/semver"
 )
 
+var Conf = defaultConfig()
+
 func decoderHookSemver() mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
 		v, ok := data.(string)

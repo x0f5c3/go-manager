@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/pelletier/go-toml"
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/x0f5c3/zerolog/log"
@@ -19,6 +21,89 @@ import (
 	"github.com/x0f5c3/go-manager/internal/fsutil"
 	"github.com/x0f5c3/go-manager/pkg/semver"
 )
+
+
+var initCmd = &cobra.Command{
+	Use: "init [data directory]",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			args = append(args, fsutil.DefaultDataDir)
+			return nil
+		} else if len(args) > 1 {
+			return errors.New("too many arguments")
+		}
+		return nil
+	},
+	Short: "Initialize config",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dataDir := args[0]
+		err := setupDataDir(dataDir)
+
+	}
+}
+
+var setCmd = &cobra.Command{
+	Use:   "set [key] [value]",
+	Args:  cobra.ExactArgs(2),
+	Short: "Set config",
+}
+
+var getCmd = &cobra.Command{
+	Use:   "get [key]",
+	Args:  cobra.ExactArgs(1),
+	Short: "Get config",
+}
+
+var flagSet = configFlagSet()
+
+
+
+func setupDataDir(datadir string) error {
+	if !fsutil.CheckExists(datadir) {
+		err := fsutil.CreateDir(datadir)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create data dir")
+			return err
+		}
+	}
+	if !fsutil.CheckExists(filepath.Join(datadir, "envs")) {
+		err := fsutil.CreateDir(filepath.Join(datadir, "envs"))
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create envs dir")
+			return err
+		}
+	}
+	if !fsutil.CheckExists(filepath.Join(datadir, "logs")) {
+		err := fsutil.CreateDir(filepath.Join(datadir, "logs"))
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create logs dir")
+			return err
+		}
+	}
+	err := setupTodayLogDir(filepath.Join(datadir, "logs"))
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create today log dir")
+		return err
+	}
+	return nil
+}
+
+func todayLogDir(args ...string) string {
+	args = append(args, time.Now().Local().Format("2006-01-02"))
+	return filepath.Join(args...)
+}
+
+func setupTodayLogDir(logDir string) error {
+	dirName := todayLogDir(logDir)
+	if !fsutil.CheckExists(dirName) {
+		err := fsutil.CreateDir(dirName)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create today log dir")
+			return err
+		}
+	}
+	return nil
+}
 
 func decoderHookSemver() mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
@@ -102,6 +187,8 @@ func checkFlagsExists(flags *pflag.FlagSet) []string {
 	}
 	return flagNames
 }
+
+var defaultFlagSet = configFlagSet()
 
 func configFlagSet() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("config", pflag.ContinueOnError)
@@ -242,24 +329,24 @@ func tryReadFile(path string) (*Config, error) {
 
 var config = defaultConfig()
 
-func init() {
-	create, err := configDirCreate()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create config dir")
-		return
-	}
-	res, err := InitConfig(create)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to init config")
-		return
-	}
-	config = res
-	err = config.Save()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to save config")
-		return
-	}
-}
+// func init() {
+// 	create, err := configDirCreate()
+// 	if err != nil {
+// 		log.Error().Err(err).Msg("Failed to create config dir")
+// 		return
+// 	}
+// 	res, err := InitConfig(create)
+// 	if err != nil {
+// 		log.Error().Err(err).Msg("Failed to init config")
+// 		return
+// 	}
+// 	config = res
+// 	err = config.Save()
+// 	if err != nil {
+// 		log.Error().Err(err).Msg("Failed to save config")
+// 		return
+// 	}
+// }
 
 func configDirCreate() (string, error) {
 	if fsutil.CheckExists(fsutil.DefaultDataDir) {

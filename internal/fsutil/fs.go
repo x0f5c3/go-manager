@@ -6,8 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	"github.com/x0f5c3/zerolog/log"
+
+	"github.com/x0f5c3/go-manager/internal/config"
 )
 
 // FindExistingParent finds the first existing parent directory of the given path
@@ -22,6 +26,94 @@ func FindExistingParent(path string) string {
 		exists = CheckExists(path)
 	}
 	return path
+}
+
+var InstallCmd = &cobra.Command{
+	Use:   "install [directory]",
+	Short: "Install gom to the given directory",
+	Long:  `Install gom to the given directory`,
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			args = append(args, DefaultDataDir)
+		} else if len(args) > 1 {
+			return fmt.Errorf("too many arguments")
+		}
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dataDir := args[0]
+		exists, perms := CheckExistsWritable(dataDir)
+		if !exists {
+			log.Info().Str("Path", dataDir).Msg("data directory doesn't exist")
+		}
+		if !perms {
+			log.Error().Err(fmt.Errorf("no write permissions")).Str("Path", dataDir).Msg("data directory is not writable")
+			return fmt.Errorf("data directory is not writable")
+		}
+		installInfo, err := CopyAppToDataDir(dataDir)
+		if err != nil {
+			return err
+		}
+		b, err := toml.Marshal(config.Conf)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to marshal config")
+			return errors.Wrap(err, "failed to marshal config")
+		}
+		if err := os.WriteFile(installInfo.ConfigPath, b, 0644); err != nil {
+			log.Error().Err(err).Msgf("failed to write %s", installInfo.ConfigPath)
+			return errors.Wrap(err, "failed to write config")
+		}
+		b, err = toml.Marshal(installInfo)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to marshal install info")
+			return errors.Wrap(err, "failed to marshal install info")
+		}
+		if err := os.WriteFile(filepath.Join(dataDir, "install.toml"), b, 0644); err != nil {
+			log.Error().Err(err).Msgf("failed to write %s", filepath.Join(dataDir, "install.toml"))
+			return errors.Wrap(err, "failed to write install info")
+		}
+		return nil
+	},
+	Hidden: true,
+}
+
+func CopyAppToDataDir(dataDir string) (*InstallInformation, error) {
+	binDir := filepath.Join(dataDir, "bin")
+	selfPath, err := FindMyself()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to find myself")
+		return nil, errors.Wrap(err, "failed to find myself")
+	}
+	selfBytes, err := os.ReadFile(selfPath)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to read myself")
+		return nil, errors.Wrap(err, "failed to read myself")
+	}
+	selfName := filepath.Base(selfPath)
+	newSelfPath := filepath.Join(binDir, selfName)
+	if !CheckExists(binDir) {
+		if err := CreateDir(binDir); err != nil {
+			log.Error().Err(err).Msgf("failed to create %s directory", binDir)
+			return nil, errors.Wrap(err, "failed to create bin dir")
+		}
+	} else {
+		if CheckExists(newSelfPath) {
+			if err := os.Remove(newSelfPath); err != nil {
+				log.Error().Err(err).Msgf("failed to remove %s", newSelfPath)
+				return nil, errors.Wrap(err, "failed to remove old self")
+			}
+		}
+	}
+	err = os.WriteFile(newSelfPath, selfBytes, 0755) //nolint:gosec
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to write %s", newSelfPath)
+		return nil, errors.Wrap(err, "failed to write new self")
+	}
+	return &InstallInformation{
+		InstallPath: dataDir,
+		ConfigPath:  filepath.Join(dataDir, "gom.toml"),
+		ExePath:     newSelfPath,
+	}, nil
 }
 
 type InstallInformation struct {

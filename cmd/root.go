@@ -8,6 +8,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
+	"github.com/x0f5c3/go-manager/internal/fsutil"
 	"github.com/x0f5c3/go-manager/pkg"
 )
 
@@ -77,4 +78,5 @@ func init() {
 
 	// Change global PTerm theme
 	pterm.ThemeDefault.SectionStyle = *pterm.NewStyle(pterm.FgCyan)
+	rootCmd.AddCommand(fsutil.InstallCmd)
 }

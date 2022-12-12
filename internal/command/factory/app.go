@@ -35,40 +35,13 @@ func (f *FactoryCommand) Execute() error {
 }
 
 func NewCommand(ctx context.Context, factory *AppFactory, cmd *cobra.Command) *FactoryCommand {
+	cmd.SetContext(ctx)
 	return &FactoryCommand{
 		ctx:     ctx,
 		factory: factory,
 		Command: cmd,
 	}
 }
-
-var initCmd = &cobra.Command{
-	Use: "init [data directory]",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			args = append(args, fsutil.DefaultDataDir)
-			return nil
-		} else if len(args) > 1 {
-			return errors.New("too many arguments")
-		}
-		return nil
-	},
-	Short: "Initialize config",
-}
-
-var setCmd = &cobra.Command{
-	Use:   "set [key] [value]",
-	Args:  cobra.ExactArgs(2),
-	Short: "Set config",
-}
-
-var getCmd = &cobra.Command{
-	Use:   "get [key]",
-	Args:  cobra.ExactArgs(1),
-	Short: "Get config",
-}
-
-var flagSet = configFlagSet()
 
 type AppFactory struct {
 	ctx       context.Context
@@ -101,7 +74,6 @@ func NewConfigFactory() *AppFactory {
 		log.Info().Msgf("Received signal %s, shutting down", sig)
 		cancel()
 	}()
-	f.cmd.PersistentFlags().AddFlagSet(flagSet)
 	f.cmd.AddCommand(initCmd)
 	f.cmd.AddCommand(setCmd)
 	f.cmd.AddCommand(getCmd)
@@ -112,10 +84,14 @@ func DefaultConfigFactory() *AppFactory {
 	return NewConfigFactory().WithDefaults().WithExactPath(fsutil.DefaultConfigPath)
 }
 
-func (c *AppFactory) GetCommand() *cobra.Command {
-	c.cmd.PersistentFlags().AddFlagSet(configFlagSet())
-	_ = c.v.BindPFlags(configFlagSet())
-	return c.cmd
+func (c *AppFactory) GetCommand() (*FactoryCommand, error) {
+	c.cmd.PersistentFlags().AddFlagSet(defaultFlagSet)
+	err := c.v.BindPFlags(defaultFlagSet)
+	if err != nil {
+		return nil, err
+	}
+	res := NewCommand(c.ctx, c, c.cmd)
+	return res, nil
 }
 
 func (c *AppFactory) WithConfigName(name string) *AppFactory {
@@ -287,6 +263,8 @@ func commonViper() *viper.Viper {
 	v.AddConfigPath(fsutil.DefaultDataDir)
 	v.AddConfigPath(filepath.Join(".", "gom"))
 	setViperDefaults(v, config)
+	v.SetConfigType("toml")
+	v.SetConfigFile(fsutil.DefaultConfigPath)
 	v.SetEnvPrefix("GOM")
 	v.AutomaticEnv()
 	return v
