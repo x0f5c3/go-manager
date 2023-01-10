@@ -12,7 +12,7 @@ require (
 	github.com/pterm/pcli v0.4.6
 	github.com/pterm/pterm v0.12.50
 	github.com/spf13/cobra v1.6.1
-	github.com/valyala/fasthttp v1.43.0
+	github.com/valyala/fasthttp v1.44.0
 	github.com/x0f5c3/manic-go v0.5.7
 	github.com/x0f5c3/zerolog v1.28.2
 )
