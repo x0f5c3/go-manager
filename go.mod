@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.23.3
 
 require (
-	github.com/fsnotify/fsnotify v1.6.0
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/goccy/go-json v0.10.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pelletier/go-toml v1.9.5
