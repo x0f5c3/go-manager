@@ -1,6 +1,6 @@
 module github.com/x0f5c3/go-manager
 
-go 1.21
+go 1.21.0
 
 toolchain go1.23.3
 
@@ -9,7 +9,7 @@ require (
 	github.com/goccy/go-json v0.10.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pelletier/go-toml v1.9.5
-	github.com/pelletier/go-toml/v2 v2.0.6
+	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pcli v0.4.6
 	github.com/pterm/pterm v0.12.79
