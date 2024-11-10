@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/goccy/go-json v0.10.0
+	github.com/goccy/go-json v0.10.3
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/pelletier/go-toml/v2 v2.0.6
