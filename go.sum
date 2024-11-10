@@ -374,6 +374,8 @@ github.com/valyala/fasthttp v1.43.0/go.mod h1:f6VbjjoI3z1NDOZOv17o6RvtRSWxC77seB
 github.com/valyala/tcplisten v1.0.0/go.mod h1:T0xQ8SeCZGxckz9qRXTfG43PvQ/mcWh7FwZEA7Ioqkc=
 github.com/x0f5c3/manic-go v0.5.7 h1:fWVcV3BHuNiR9Bu6jESnX2HHPm575vpiXIST6LgFysE=
 github.com/x0f5c3/manic-go v0.5.7/go.mod h1:v6ooQxC+R6dXkIxwgybetInjGmJ3NpaqahuClPEAcog=
+github.com/x0f5c3/manic-go v0.5.10 h1:baJgNObYmqhjPfqHDh6PeueqYnDiQrRHtRBmXE+hDWg=
+github.com/x0f5c3/manic-go v0.5.10/go.mod h1:6isakrIOyyprCmBiTF6NoxICNFdQl6ppv8+UEfAvMbU=
 github.com/x0f5c3/zerolog v1.28.2 h1:6hPBKIfkfJ7wTTRVP/BqZmpq8XkK7ghxVtXrxZmDFXY=
 github.com/x0f5c3/zerolog v1.28.2/go.mod h1:445A2xAcWEF5n0n5+QyZmQioTztCM1DvjDeir2LnFjM=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
