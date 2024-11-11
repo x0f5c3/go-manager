@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pcli v0.4.6
 	github.com/pterm/pterm v0.12.79
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.8.1
 	github.com/valyala/fasthttp v1.43.0
 	github.com/x0f5c3/manic-go v0.5.7
 	github.com/x0f5c3/zerolog v1.28.2
@@ -42,7 +42,7 @@ require (
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.15.12 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
