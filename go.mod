@@ -2,7 +2,7 @@ module github.com/x0f5c3/go-manager
 
 go 1.21
 
-toolchain go1.23.3
+toolchain go1.24.3
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0
