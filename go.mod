@@ -48,7 +48,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/panjf2000/gnet/v2 v2.1.2 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.14.0
 	github.com/superwhiskers/crunch/v3 v3.5.6 // indirect
 	github.com/tidwall/gjson v1.14.2 // indirect
